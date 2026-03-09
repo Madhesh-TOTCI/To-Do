@@ -2,25 +2,26 @@ import React, { useState, useEffect } from 'react';
 
 // --- Build-Safe Icons ---
 const IconPlus = () => <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="3" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-const IconSearch = () => <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
-const IconTrash = () => <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-const IconEdit = () => <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+const IconSort = () => <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="14" y2="12"></line><line x1="4" y1="18" x2="8" y2="18"></line></svg>;
+const IconDownload = () => <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
+const IconTrash = () => <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
 
 function App() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState('Medium');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [sortBy, setSortBy] = useState('Newest'); // or 'Priority'
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('vibrant-tasks-final');
+    const saved = localStorage.getItem('vibrant-tasks-v4');
     if (saved) setTasks(JSON.parse(saved));
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('vibrant-tasks-final', JSON.stringify(tasks));
+    localStorage.setItem('vibrant-tasks-v4', JSON.stringify(tasks));
   }, [tasks]);
 
   const handleAddTask = (e) => {
@@ -30,128 +31,139 @@ function App() {
       id: Date.now(),
       title: title.trim(),
       priority,
+      dueDate: dueDate || 'No Date',
       completed: false,
-      timestamp: new Date().toLocaleDateString()
+      createdAt: new Date().getTime()
     };
     setTasks([newTask, ...tasks]);
     setTitle('');
   };
 
-  const startEdit = (task) => {
-    setEditingId(task.id);
-    setEditValue(task.title);
+  const exportData = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "my_tasks_backup.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   };
 
-  const saveEdit = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, title: editValue } : t));
-    setEditingId(null);
-  };
+  const getPriorityWeight = (p) => p === 'High' ? 3 : p === 'Medium' ? 2 : 1;
 
-  const handleToggle = (id) => setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  const deleteTask = (id) => setTasks(tasks.filter(t => t.id !== id));
-  const clearAll = () => { if(window.confirm("Clear all tasks?")) setTasks([]); };
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (sortBy === 'Priority') return getPriorityWeight(b.priority) - getPriorityWeight(a.priority);
+    return b.createdAt - a.createdAt;
+  });
 
-  const filteredTasks = tasks.filter(t => t.title.toLowerCase().includes(searchTerm.toLowerCase()));
-  const pending = filteredTasks.filter(t => !t.completed);
-  const completed = filteredTasks.filter(t => t.completed);
-  const progress = tasks.length ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0;
+  const pending = sortedTasks.filter(t => !t.completed);
+  const completed = sortedTasks.filter(t => t.completed);
+  const progress = tasks.length ? Math.round((completed.length / tasks.length) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#050505] text-slate-300 font-sans p-4 md:px-10 py-12 selection:bg-indigo-500">
-      <div className="max-w-6xl mx-auto">
+    <div className={`min-h-screen bg-[#0a0a0c] text-slate-300 font-sans p-6 md:p-12 transition-all duration-1000 ${progress === 100 && tasks.length > 0 ? 'bg-emerald-950/20 shadow-[inset_0_0_100px_rgba(16,185,129,0.1)]' : ''}`}>
+      
+      <div className="max-w-7xl mx-auto">
         
-        {/* TOP BAR */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-8">
-          <div>
-            <h1 className="text-4xl font-black text-white tracking-tighter">TASK<span className="text-indigo-500">FLOW</span></h1>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">Performance Workspace</p>
-          </div>
-          
-          <div className="flex-1 max-w-sm w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/5 relative mx-4">
-            <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-600 to-purple-500 transition-all duration-700" style={{ width: `${progress}%` }}></div>
-          </div>
-
-          <div className="flex gap-3">
-             <div className="relative">
-                <span className="absolute left-3 top-2.5 text-slate-500"><IconSearch /></span>
-                <input 
-                  placeholder="Filter..." 
-                  className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm outline-none focus:border-indigo-500/50 w-32 md:w-52 transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+        {/* TOP DASHBOARD CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+          <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl">
+             <h4 className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Current Efficiency</h4>
+             <div className="flex items-end gap-3 mt-2">
+                <span className="text-4xl font-black text-white">{progress}%</span>
+                <span className="text-emerald-500 text-xs font-bold mb-1">↑ Complete</span>
              </div>
-             <button onClick={clearAll} className="p-2.5 bg-rose-500/10 hover:bg-rose-500 hover:text-white rounded-xl text-rose-500 transition-all border border-rose-500/20">
-                <IconTrash />
+          </div>
+          <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem]">
+             <h4 className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Priority Alert</h4>
+             <div className="flex items-end gap-3 mt-2">
+                <span className="text-4xl font-black text-rose-500">{pending.filter(t => t.priority === 'High').length}</span>
+                <span className="text-rose-400 text-xs font-bold mb-1">High Focus</span>
+             </div>
+          </div>
+          <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between">
+             <h4 className="text-[10px] font-black tracking-widest text-slate-500 uppercase">System Data</h4>
+             <button onClick={exportData} className="flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-white transition-colors mt-2 uppercase tracking-tighter">
+                <IconDownload /> Backup to Local Machine
              </button>
           </div>
         </div>
 
-        {/* INPUT SECTION */}
-        <section className="max-w-3xl mx-auto mb-20 bg-white/5 p-2 rounded-[2.5rem] border border-white/10 shadow-2xl">
-          <form onSubmit={handleAddTask} className="flex flex-col md:flex-row gap-2">
+        {/* INPUT BOX - ELITE BOX */}
+        <section className="bg-white/[0.03] p-1.5 rounded-[3rem] border border-white/10 mb-20 max-w-4xl mx-auto shadow-2xl">
+          <form onSubmit={handleAddTask} className="flex flex-col lg:flex-row gap-2">
              <input 
-               className="flex-1 bg-transparent px-6 py-4 text-xl outline-none text-white font-medium placeholder:text-slate-700"
-               placeholder="What's the next goal?"
+               className="flex-1 bg-transparent px-8 py-5 text-xl outline-none text-white font-medium placeholder:text-slate-700"
+               placeholder="Write your next mission..."
                value={title}
                onChange={(e) => setTitle(e.target.value)}
              />
-             <div className="flex gap-2 p-2 bg-black/40 rounded-[1.8rem]">
+             <div className="flex flex-wrap items-center gap-2 p-3 bg-black/40 rounded-[2.5rem]">
+                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="bg-white/5 text-[10px] text-slate-400 font-bold px-4 py-2 rounded-xl outline-none border border-white/5" />
+                <div className="h-6 w-[1px] bg-white/10 hidden md:block mx-1"></div>
                 {['High', 'Medium', 'Low'].map(p => (
-                  <button 
-                    key={p} type="button" onClick={() => setPriority(p)}
-                    className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase transition-all ${priority === p ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
+                  <button key={p} type="button" onClick={() => setPriority(p)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${priority === p ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500 hover:text-white'}`}>
                     {p}
                   </button>
                 ))}
-                <button type="submit" className="bg-white text-black px-6 py-2 rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all flex items-center gap-1">
-                  ADD <IconPlus />
+                <button type="submit" className="bg-white text-black h-12 w-12 flex items-center justify-center rounded-2xl hover:scale-110 active:scale-95 transition-all">
+                  <IconPlus />
                 </button>
              </div>
           </form>
         </section>
 
-        {/* BOARD */}
+        {/* CONTROLS */}
+        <div className="flex justify-between items-center mb-10 px-4">
+           <div className="flex items-center gap-6">
+              <h2 className="text-xl font-black text-white tracking-widest uppercase">Workspace</h2>
+              <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                 <button onClick={() => setSortBy('Newest')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${sortBy === 'Newest' ? 'bg-white/10 text-white' : 'text-slate-600'}`}>Newest</button>
+                 <button onClick={() => setSortBy('Priority')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${sortBy === 'Priority' ? 'bg-white/10 text-white' : 'text-slate-600'}`}>Priority</button>
+              </div>
+           </div>
+           {progress === 100 && tasks.length > 0 && <span className="text-emerald-500 text-[10px] font-black animate-bounce tracking-[0.3em]">ALL OBJECTIVES SECURED 🏆</span>}
+        </div>
+
+        {/* 2-COLUMN VIEW */}
         <div className="grid lg:grid-cols-2 gap-12">
           
           {/* PENDING */}
           <div className="space-y-6">
-            <h2 className="text-xs font-black text-rose-500 tracking-[0.4em] flex items-center gap-2 uppercase px-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rose]"></span>
-              Pending Objectives ({pending.length})
-            </h2>
+            <div className="flex items-center gap-4 text-rose-500 border-b border-rose-500/10 pb-4">
+               <IconSort /> <span className="text-xs font-black uppercase tracking-[0.4em]">Active Operations</span>
+            </div>
             <div className="space-y-4">
               {pending.map(task => (
-                <div key={task.id} className="group bg-white/5 border border-white/10 rounded-[2rem] p-6 hover:border-indigo-500/30 transition-all duration-500 relative overflow-hidden">
-                  <div className={`absolute top-0 left-0 w-1.5 h-full ${task.priority === 'High' ? 'bg-rose-500' : task.priority === 'Medium' ? 'bg-amber-400' : 'bg-blue-500'}`}></div>
+                <div key={task.id} className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 rounded-[2.5rem] p-8 transition-all duration-500 relative">
+                  <div className={`absolute top-8 left-0 w-1.5 h-12 rounded-r-full ${task.priority === 'High' ? 'bg-rose-500 shadow-[0_0_15px_rose]' : 'bg-indigo-500'}`}></div>
                   
                   {editingId === task.id ? (
-                    <div className="flex flex-col gap-3">
-                      <input 
-                        className="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white outline-none font-bold"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        autoFocus
-                      />
+                    <div className="flex flex-col gap-4">
+                      <input className="bg-white/10 rounded-2xl px-6 py-3 text-white outline-none border border-indigo-500/30" value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus />
                       <div className="flex gap-2">
-                        <button onClick={() => saveEdit(task.id)} className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase">Save Change</button>
-                        <button onClick={() => setEditingId(null)} className="text-slate-500 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase">Cancel</button>
+                        <button onClick={() => { setTasks(tasks.map(t => t.id === task.id ? {...t, title: editValue} : t)); setEditingId(null); }} className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-[10px] font-black">SAVE</button>
+                        <button onClick={() => setEditingId(null)} className="text-slate-500 px-6 py-2 font-black text-[10px]">CANCEL</button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">{task.priority} Priority</span>
-                        <h3 className="text-xl font-bold text-white leading-snug">{task.title}</h3>
-                        <div className="mt-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => startEdit(task)} className="flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-white transition-colors uppercase"><IconEdit /> Edit</button>
-                          <button onClick={() => deleteTask(task.id)} className="flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-rose-500 transition-colors uppercase"><IconTrash /> Remove</button>
+                    <div className="flex flex-col">
+                      <div className="flex justify-between items-start gap-4 mb-4">
+                        <div>
+                           <div className="flex gap-2 items-center mb-2">
+                              <span className="text-[8px] font-black uppercase text-indigo-400 border border-indigo-400/20 px-2 py-0.5 rounded-md">Priority {task.priority}</span>
+                              <span className="text-[8px] font-black uppercase text-slate-500">Due: {task.dueDate}</span>
+                           </div>
+                           <h3 className="text-2xl font-bold text-white tracking-tight leading-tight">{task.title}</h3>
                         </div>
+                        <button onClick={() => setTasks(tasks.map(t => t.id === task.id ? {...t, completed: true} : t))} className="w-14 h-14 rounded-full border border-white/10 flex items-center justify-center text-slate-500 hover:bg-emerald-500 hover:text-white transition-all shadow-inner">
+                           <IconPlus />
+                        </button>
                       </div>
-                      <button onClick={() => handleToggle(task.id)} className="w-12 h-12 rounded-2xl border border-white/10 flex items-center justify-center text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all">
-                         <IconPlus /> {/* Recycled plus for check */}
-                      </button>
+                      <div className="flex gap-4 pt-4 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button onClick={() => { setEditingId(task.id); setEditValue(task.title); }} className="text-[9px] font-black text-slate-600 hover:text-white uppercase tracking-widest">Edit Entry</button>
+                         <button onClick={() => setTasks(tasks.filter(t => t.id !== task.id))} className="text-[9px] font-black text-slate-600 hover:text-rose-500 uppercase tracking-widest"><IconTrash /></button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -161,24 +173,23 @@ function App() {
 
           {/* COMPLETED */}
           <div className="space-y-6">
-            <h2 className="text-xs font-black text-emerald-500 tracking-[0.4em] flex items-center gap-2 uppercase px-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_emerald]"></span>
-              Completed Archive ({completed.length})
-            </h2>
+            <div className="flex items-center gap-4 text-emerald-500 border-b border-emerald-500/10 pb-4">
+               <span className="text-xs font-black uppercase tracking-[0.4em]">Success Archive</span>
+            </div>
             <div className="space-y-4">
               {completed.map(task => (
-                <div key={task.id} className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 opacity-40 hover:opacity-100 transition-all">
-                  <div className="flex justify-between items-center">
-                    <p className="text-lg text-emerald-100/70 line-through decoration-emerald-500/50 font-medium italic">{task.title}</p>
-                    <button onClick={() => handleToggle(task.id)} className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
-                       ✔
+                <div key={task.id} className="bg-emerald-500/[0.02] border border-emerald-500/10 rounded-[2.5rem] p-8 opacity-40 hover:opacity-100 transition-all">
+                  <div className="flex justify-between items-center bg-transparent">
+                    <p className="text-xl font-medium text-emerald-100/60 line-through italic">{task.title}</p>
+                    <button onClick={() => setTasks(tasks.map(t => t.id === task.id ? {...t, completed: false} : t))} className="text-emerald-500">
+                       <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </button>
                   </div>
-                  <button onClick={() => deleteTask(task.id)} className="mt-4 text-[10px] font-bold text-slate-700 hover:text-rose-500 uppercase tracking-widest">Delete Permanent</button>
                 </div>
               ))}
             </div>
           </div>
+
         </div>
       </div>
     </div>
