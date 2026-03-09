@@ -1,174 +1,182 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, ListTodo, Layers, Trash2, Plus, Sparkles, AlertCircle } from 'lucide-react';
-import { fetchTasks, createTask, updateTask, deleteTask } from './api/taskApi';
+import { CheckSquare, ListTodo, Trash2, Plus, Edit3, Save, X, Clock, CheckCircle2 } from 'lucide-react';
 
 function App() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
 
+  // Save/Load from LocalStorage (No Backend needed!)
   useEffect(() => {
-    loadTasks();
+    const saved = localStorage.getItem('vibrant-tasks');
+    if (saved) setTasks(JSON.parse(saved));
   }, []);
 
-  const loadTasks = async () => {
-    try {
-      const { data } = await fetchTasks();
-      setTasks(data);
-    } catch (err) {
-      setError('Connection failed. Please check your backend URL.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    localStorage.setItem('vibrant-tasks', JSON.stringify(tasks));
+  }, [tasks]);
 
-  const handleAddTask = async (e) => {
+  const handleAddTask = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    try {
-      const { data } = await createTask({ title, completed: false });
-      setTasks([data, ...tasks]);
-      setTitle('');
-    } catch (err) {
-      console.error('Error adding task');
-    }
+    const newTask = {
+      id: Date.now(),
+      title: title.trim(),
+      completed: false,
+      createdAt: new Date().toLocaleTimeString()
+    };
+    setTasks([newTask, ...tasks]);
+    setTitle('');
   };
 
-  const handleToggleTask = async (id, currentStatus) => {
-    try {
-      const { data } = await updateTask(id, { completed: !currentStatus });
-      setTasks(tasks.map((t) => (t._id === id ? data : t)));
-    } catch (err) {
-      console.error('Error updating task');
-    }
+  const handleToggleTask = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
   };
 
-  const handleDeleteTask = async (id) => {
-    try {
-      await deleteTask(id);
-      setTasks(tasks.filter((t) => t._id !== id));
-    } catch (err) {
-      console.error('Error deleting task');
-    }
+  const handleDeleteTask = (id) => {
+    setTasks(tasks.filter(t => t.id !== id));
   };
 
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+  const startEdit = (task) => {
+    setEditingId(task.id);
+    setEditValue(task.title);
   };
+
+  const saveEdit = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, title: editValue } : t));
+    setEditingId(null);
+  };
+
+  const pendingTasks = tasks.filter(t => !t.completed);
+  const completedTasks = tasks.filter(t => t.completed);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFDEE9] via-[#B5FFFC] to-[#CFBAF0] pb-12 font-sans">
-      {/* Dynamic Header */}
-      <nav className="backdrop-blur-md bg-white/30 sticky top-0 z-10 border-b border-white/20 py-4 mb-8">
-        <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-indigo-500 p-2 rounded-2xl shadow-lg shadow-indigo-200 text-white">
-              <CheckSquare size={26} />
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-gray-800">
-              Vibrant<span className="text-indigo-600">Tasks</span>
-            </h1>
-          </div>
-          <div className="bg-white/50 px-4 py-1.5 rounded-full text-sm font-bold text-gray-700 shadow-sm border border-white/40">
-            {greeting()} ✨
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-yellow-200 via-pink-200 to-purple-300 p-4 md:p-8 font-sans transition-all">
+      <div className="max-w-6xl mx-auto">
+        
+        {/* Header */}
+        <header className="mb-10 text-center">
+          <h1 className="text-5xl font-black text-gray-800 drop-shadow-sm mb-2 flex items-center justify-center gap-3">
+             <div className="bg-black p-2 rounded-2xl shadow-xl shadow-purple-400/50"><SparkleIcon /></div>
+             MY TASK MASTER
+          </h1>
+          <p className="text-gray-600 font-bold tracking-widest uppercase text-xs">Organize • Accomplish • Repeat</p>
+        </header>
 
-      <main className="max-w-2xl mx-auto px-6">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white/60 backdrop-blur-lg p-4 rounded-3xl border border-white/50 shadow-xl shadow-blue-100/20 text-center">
-            <Layers className="mx-auto mb-1 text-blue-500" size={20} />
-            <p className="text-[10px] uppercase font-black text-gray-400">Total</p>
-            <p className="text-xl font-black text-gray-800">{tasks.length}</p>
-          </div>
-          <div className="bg-white/60 backdrop-blur-lg p-4 rounded-3xl border border-white/50 shadow-xl shadow-purple-100/20 text-center">
-            <ListTodo className="mx-auto mb-1 text-purple-500" size={20} />
-            <p className="text-[10px] uppercase font-black text-gray-400">Pending</p>
-            <p className="text-xl font-black text-gray-800">{tasks.filter(t => !t.completed).length}</p>
-          </div>
-          <div className="bg-white/60 backdrop-blur-lg p-4 rounded-3xl border border-white/50 shadow-xl shadow-green-100/20 text-center">
-            <CheckSquare className="mx-auto mb-1 text-green-500" size={20} />
-            <p className="text-[10px] uppercase font-black text-gray-400">Done</p>
-            <p className="text-xl font-black text-gray-800">{tasks.filter(t => t.completed).length}</p>
-          </div>
-        </div>
-
-        {/* Add Task Form */}
-        <form onSubmit={handleAddTask} className="mb-10 relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-          <div className="relative flex gap-2">
+        {/* Input Area */}
+        <form onSubmit={handleAddTask} className="max-w-xl mx-auto mb-16 relative">
+          <div className="flex gap-3 bg-white/40 p-3 rounded-[2.5rem] backdrop-blur-xl border-2 border-white shadow-2xl">
             <input 
-              className="flex-1 bg-white border-none rounded-2xl px-6 py-4 shadow-xl focus:ring-4 focus:ring-indigo-200 outline-none transition-all placeholder:text-gray-400 font-medium"
-              placeholder="What's your next big goal?"
+              className="flex-1 bg-transparent px-6 py-3 outline-none text-gray-800 font-bold placeholder:text-gray-500 text-lg"
+              placeholder="Type a new goal..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-            <button className="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all active:scale-90 flex items-center justify-center">
-              <Plus size={24} strokeWidth={3} />
+            <button className="bg-gray-900 hover:bg-black text-white px-8 rounded-full font-black shadow-lg transition-all active:scale-90 flex items-center gap-2">
+              ADD <Plus size={20} strokeWidth={3} />
             </button>
           </div>
         </form>
 
-        {error && (
-          <div className="bg-white/80 p-4 rounded-2xl border-l-4 border-rose-500 shadow-md mb-6 flex items-center gap-3 text-rose-600 font-bold">
-            <AlertCircle size={20} />
-            {error}
-          </div>
-        )}
-
-        {/* Task List */}
-        <div className="space-y-4">
-          {loading ? (
-            <div className="text-center py-20">
-              <div className="animate-spin mb-4 inline-block"><Sparkles className="text-indigo-500" size={40} /></div>
-              <p className="font-bold text-gray-500">Curating your list...</p>
+        {/* Board Layout */}
+        <div className="grid md:grid-cols-2 gap-8 items-start">
+          
+          {/* COLUMN 1: PENDING */}
+          <section className="space-y-6">
+            <div className="flex items-center justify-between px-4">
+              <h2 className="text-2xl font-black text-red-600 flex items-center gap-2">
+                <Clock /> PENDING STAGE <span className="bg-red-100 px-3 py-1 rounded-full text-sm">{pendingTasks.length}</span>
+              </h2>
             </div>
-          ) : tasks.length === 0 ? (
-            <div className="text-center py-16 bg-white/40 rounded-[2rem] border-2 border-dashed border-white/60">
-              <p className="text-gray-500 font-medium">Your list is clean. Enjoy your day! 🌈</p>
-            </div>
-          ) : (
-            tasks.map((task) => (
-              <div 
-                key={task._id} 
-                className={`group flex items-center justify-between p-5 rounded-[1.5rem] transition-all duration-300 border border-white/40 shadow-sm hover:shadow-xl hover:-translate-y-1 ${
-                  task.completed ? 'bg-white/40 scale-[0.98]' : 'bg-white shadow-indigo-100/50'
-                }`}
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <button 
-                    onClick={() => handleToggleTask(task._id, task.completed)}
-                    className={`w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all ${
-                      task.completed ? 'bg-green-500 border-green-500 shadow-lg shadow-green-200' : 'border-gray-200 hover:border-indigo-400'
-                    }`}
-                  >
-                    {task.completed && <Plus className="text-white rotate-45" size={18} strokeWidth={4} />}
-                  </button>
-                  <span className={`text-lg font-bold transition-all ${
-                    task.completed ? 'line-through text-gray-400 opacity-60' : 'text-gray-700'
-                  }`}>
-                    {task.title}
-                  </span>
+            
+            <div className="space-y-4">
+              {pendingTasks.map(task => (
+                <div key={task.id} className="bg-red-500 text-white p-5 rounded-[2rem] shadow-xl shadow-red-200 border-b-8 border-red-700 flex flex-col gap-3 group animate-in slide-in-from-left duration-300">
+                  {editingId === task.id ? (
+                    <div className="flex gap-2">
+                      <input 
+                        className="flex-1 bg-white/20 rounded-xl px-4 py-1 text-white placeholder:text-red-200 outline-none border-2 border-white/50 font-bold"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        autoFocus
+                      />
+                      <button onClick={() => saveEdit(task.id)} className="bg-white text-red-600 p-2 rounded-xl hover:bg-green-50"><Save size={20} /></button>
+                      <button onClick={() => setEditingId(null)} className="bg-white/20 p-2 rounded-xl"><X size={20} /></button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-start">
+                        <span className="text-xl font-bold leading-tight">{task.title}</span>
+                        <input 
+                           type="checkbox" 
+                           checked={task.completed}
+                           onChange={() => handleToggleTask(task.id)}
+                           className="w-8 h-8 rounded-full border-4 border-white appearance-none checked:bg-white cursor-pointer transition-all hover:scale-110"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-2 pt-3 border-t border-white/20">
+                        <span className="text-[10px] font-black opacity-60">ADDED: {task.createdAt}</span>
+                        <div className="flex gap-1">
+                          <button onClick={() => startEdit(task)} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><Edit3 size={18} /></button>
+                          <button onClick={() => handleDeleteTask(task.id)} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <button 
-                  onClick={() => handleDeleteTask(task._id)}
-                  className="opacity-0 group-hover:opacity-100 p-2.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                >
-                  <Trash2 size={20} />
-                </button>
-              </div>
-            ))
-          )}
+              ))}
+              {pendingTasks.length === 0 && <EmptyState color="red" text="No pending work! Take a break." />}
+            </div>
+          </section>
+
+          {/* COLUMN 2: COMPLETED */}
+          <section className="space-y-6">
+            <div className="flex items-center justify-between px-4">
+              <h2 className="text-2xl font-black text-green-600 flex items-center gap-2">
+                <CheckCircle2 /> COMPLETED STAGE <span className="bg-green-100 px-3 py-1 rounded-full text-sm">{completedTasks.length}</span>
+              </h2>
+            </div>
+            
+            <div className="space-y-4">
+              {completedTasks.map(task => (
+                <div key={task.id} className="bg-green-500 text-white p-5 rounded-[2rem] shadow-xl shadow-green-200 border-b-8 border-green-700 flex flex-col gap-3 animate-in fade-in zoom-in duration-500">
+                  <div className="flex justify-between items-start">
+                    <span className="text-xl font-bold italic line-through opacity-80">{task.title}</span>
+                    <button 
+                      onClick={() => handleToggleTask(task.id)}
+                      className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-green-600"
+                    >
+                      <CheckCircle2 size={24} strokeWidth={3} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-3 border-t border-white/20">
+                    <span className="text-[10px] font-black opacity-60">COMPLETED! 🏆</span>
+                    <button onClick={() => handleDeleteTask(task.id)} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                  </div>
+                </div>
+              ))}
+              {completedTasks.length === 0 && <EmptyState color="green" text="Nothing finished yet. Keep going!" />}
+            </div>
+          </section>
+
         </div>
-      </main>
+      </div>
     </div>
   );
 }
+
+// Sub-components for cleaner code
+const SparkleIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#A855F7" />
+  </svg>
+);
+
+const EmptyState = ({ color, text }) => (
+  <div className={`text-center py-10 rounded-[2rem] border-4 border-dashed border-${color}-400/30`}>
+    <p className={`text-${color}-600 font-bold opacity-50`}>{text}</p>
+  </div>
+);
 
 export default App;
