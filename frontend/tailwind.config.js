@@ -1,21 +1,14 @@
-/** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
-  ],
+  content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        brand: {
-          pastel: '#F0F4FF',
-          mint: '#E6FFFA',
-          pink: '#FFF5F7',
-          lavender: '#FAF5FF',
-          primary: '#6366F1',
-          success: '#10B981',
-          danger: '#EF4444',
-        }
-      }
+        pastelBlue: "#A7C7E7",
+        pastelPink: "#F1C0E8",
+        pastelPurple: "#CFBAF0",
+        pastelGreen: "#B9FBC0",
+        pastelYellow: "#FBF8CC",
+      },
     },
   },
   plugins: [],
