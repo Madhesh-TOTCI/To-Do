@@ -1,185 +1,199 @@
 import React, { useState, useEffect } from 'react';
 
-// --- Build-Safe Icons ---
-const IconSword = () => <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 13l2 2"></path></svg>;
-const IconClock = () => <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
-const IconTrash = () => <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>;
+// --- Sharp, Professional Inline Icons ---
+const IconPlus = () => <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+const IconCheck = () => <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+const IconClock = () => <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+const IconMore = () => <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>;
 
 function App() {
   const [tasks, setTasks] = useState([]);
-  const [xp, setXp] = useState(0);
-  const [title, setTitle] = useState('');
-  const [priority, setPriority] = useState('Common');
-  // Timer State
-  const [seconds, setSeconds] = useState(1500); // 25 mins
-  const [isActive, setIsActive] = useState(false);
-  // Edit State
+  const [input, setInput] = useState('');
+  const [category, setCategory] = useState('Work');
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('quest-data');
-    if (saved) {
-      const data = JSON.parse(saved);
-      setTasks(data.tasks || []);
-      setXp(data.xp || 0);
-    }
+    const saved = localStorage.getItem('executive-tasks');
+    if (saved) setTasks(JSON.parse(saved));
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('quest-data', JSON.stringify({ tasks, xp }));
-  }, [tasks, xp]);
-
-  // Pomodoro Logic
-  useEffect(() => {
-    let interval = null;
-    if (isActive && seconds > 0) {
-      interval = setInterval(() => setSeconds(s => s - 1), 1000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isActive, seconds]);
+    localStorage.setItem('executive-tasks', JSON.stringify(tasks));
+  }, [tasks]);
 
   const addTask = (e) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!input.trim()) return;
     const newTask = {
       id: Date.now(),
-      title,
-      priority,
+      title: input.trim(),
+      category: category,
       completed: false,
-      xpValue: priority === 'Legendary' ? 100 : priority === 'Rare' ? 50 : 20
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })
     };
     setTasks([newTask, ...tasks]);
-    setTitle('');
+    setInput('');
   };
 
-  const completeTask = (task) => {
-    if (!task.completed) setXp(prev => prev + task.xpValue);
-    else setXp(prev => Math.max(0, prev - task.xpValue));
-    setTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
-  };
-
-  const saveEdit = (id) => {
+  const handleEdit = (id) => {
     setTasks(tasks.map(t => t.id === id ? { ...t, title: editValue } : t));
     setEditingId(null);
   };
 
-  const level = Math.floor(xp / 200) + 1;
-  const currentLevelXp = xp % 200;
+  const toggleTask = (id) => setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  const deleteTask = (id) => setTasks(tasks.filter(t => t.id !== id));
+
+  const pending = tasks.filter(t => !t.completed);
+  const completed = tasks.filter(t => t.completed);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white font-mono p-4 md:p-10 selection:bg-cyan-500">
+    <div className="min-h-screen bg-[#080808] text-[#e1e1e1] font-sans antialiased selection:bg-indigo-500/30">
       
-      {/* PLAYER STATS HEADER */}
-      <div className="max-w-5xl mx-auto mb-12 flex flex-col md:flex-row gap-6 items-center justify-between bg-white/[0.03] p-8 rounded-[2rem] border border-white/10">
-        <div className="flex items-center gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(6,182,212,0.4)]">
-             🛡️
-          </div>
-          <div>
-            <h2 className="text-xl font-black tracking-tighter uppercase">Player_Level {level}</h2>
-            <div className="w-48 h-3 bg-white/10 rounded-full mt-2 overflow-hidden border border-white/5">
-              <div className="h-full bg-cyan-400 shadow-[0_0_10px_#22d3ee] transition-all duration-500" style={{ width: `${(currentLevelXp / 200) * 100}%` }}></div>
-            </div>
-            <p className="text-[10px] text-cyan-400 mt-1 font-bold">{currentLevelXp} / 200 XP TO NEXT LEVEL</p>
-          </div>
+      {/* SIDEBAR NAVIGATION (Visual Only for Layout) */}
+      <div className="fixed left-0 top-0 h-full w-64 bg-[#0c0c0c] border-r border-white/5 hidden xl:flex flex-col p-6">
+        <div className="flex items-center gap-3 mb-10 px-2">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg">E</div>
+          <span className="font-bold tracking-tight text-white">Executive Control</span>
         </div>
-
-        {/* POMODORO TIMER */}
-        <div className="bg-black/40 px-8 py-4 rounded-2xl border border-white/5 text-center">
-           <div className="text-sm font-bold text-slate-500 mb-1 flex items-center gap-2 justify-center italic">
-             <IconClock /> Focus_Mode
-           </div>
-           <div className="text-3xl font-black text-white tracking-widest">
-             {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
-           </div>
-           <button onClick={() => setIsActive(!isActive)} className={`mt-2 text-[10px] font-black uppercase px-4 py-1 rounded-lg ${isActive ? 'bg-rose-500/20 text-rose-500' : 'bg-cyan-500 text-black'}`}>
-             {isActive ? '[ Pause ]' : '[ Ingratiate ]'}
-           </button>
-        </div>
+        <nav className="space-y-1">
+          <button className="w-full text-left px-3 py-2 rounded-md bg-white/5 text-sm font-medium text-white transition-colors">All Issues</button>
+          <button className="w-full text-left px-3 py-2 rounded-md hover:bg-white/5 text-sm font-medium text-slate-500 hover:text-white transition-colors">My Tasks</button>
+          <button className="w-full text-left px-3 py-2 rounded-md hover:bg-white/5 text-sm font-medium text-slate-500 hover:text-white transition-colors">Completed</button>
+        </nav>
       </div>
 
-      <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10">
+      <main className="xl:ml-64 p-6 md:p-12 max-w-5xl mx-auto">
         
-        {/* QUEST LOG (COL 1) */}
-        <div>
-           <h3 className="text-cyan-500 text-xs font-black tracking-[0.4em] mb-6 flex items-center gap-2 uppercase">
-             <IconSword /> Active_Missions
-           </h3>
-           
-           <form onSubmit={addTask} className="mb-8 space-y-2">
-              <input 
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 outline-none focus:border-cyan-500/50 text-white"
-                placeholder="Declare a new quest..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <div className="flex gap-2">
-                {['Common', 'Rare', 'Legendary'].map(p => (
-                   <button key={p} type="button" onClick={() => setPriority(p)} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase border transition-all ${priority === p ? 'bg-cyan-500 text-black border-cyan-500' : 'border-white/10 text-slate-500'}`}>
-                     {p}
-                   </button>
-                ))}
-              </div>
-              <button className="w-full bg-white text-black py-3 rounded-xl font-black uppercase hover:bg-cyan-400 transition-colors mt-2">Begin Quest</button>
-           </form>
+        {/* HEADER AREA */}
+        <header className="flex justify-between items-center mb-12">
+          <div>
+            <h1 className="text-2xl font-semibold text-white tracking-tight">Active Workspace</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage and track your primary objectives.</p>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="text-right hidden sm:block">
+               <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none">Status</p>
+               <p className="text-sm font-medium text-emerald-500">System Nominal</p>
+             </div>
+             <div className="h-8 w-[1px] bg-white/10 mx-2 hidden sm:block"></div>
+             <button onClick={() => setTasks([])} className="text-xs font-semibold text-slate-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md bg-white/5">Flush Cache</button>
+          </div>
+        </header>
 
-           <div className="space-y-4">
-              {tasks.filter(t => !t.completed).map(task => (
-                <div key={task.id} className="group bg-white/5 border border-white/5 p-6 rounded-2xl hover:border-cyan-500/30 transition-all">
-                   {editingId === task.id ? (
-                     <div className="flex gap-2">
-                        <input className="flex-1 bg-black rounded-lg px-4 py-1 text-sm outline-none border border-cyan-500" value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus />
-                        <button onClick={() => saveEdit(task.id)} className="text-[10px] font-bold text-cyan-400">SAVE</button>
-                     </div>
-                   ) : (
-                     <div className="flex justify-between items-start">
-                        <div>
-                          <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded border mb-2 inline-block ${task.priority === 'Legendary' ? 'border-amber-500 text-amber-500' : task.priority === 'Rare' ? 'border-purple-500 text-purple-500' : 'border-slate-600 text-slate-600'}`}>
-                            {task.priority} (+{task.xpValue} XP)
-                          </span>
-                          <h4 className="text-lg font-bold text-slate-200">{task.title}</h4>
-                          <div className="flex gap-4 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onClick={() => { setEditingId(task.id); setEditValue(task.title); }} className="text-[9px] font-bold text-slate-600 hover:text-white uppercase transition-colors">Modify</button>
-                             <button onClick={() => setTasks(tasks.filter(t => t.id !== task.id))} className="text-[9px] font-bold text-slate-600 hover:text-rose-500 uppercase transition-colors">Discard</button>
-                          </div>
-                        </div>
-                        <button onClick={() => completeTask(task)} className="h-12 w-12 rounded-xl border border-white/10 flex items-center justify-center text-slate-600 hover:border-cyan-500 hover:text-cyan-500 transition-all">
-                          <IconSword />
-                        </button>
-                     </div>
-                   )}
+        {/* COMMAND INPUT BAR */}
+        <div className="mb-16">
+          <form onSubmit={addTask} className="group relative bg-[#111111] border border-white/5 rounded-xl transition-all focus-within:border-indigo-500/50 focus-within:ring-4 focus-within:ring-indigo-500/10 shadow-2xl overflow-hidden">
+             <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-white/5">
+                <input 
+                  className="flex-1 bg-transparent px-6 py-4 outline-none text-white placeholder:text-slate-600"
+                  placeholder="Task description..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                />
+                <div className="flex bg-[#0c0c0c] sm:bg-transparent">
+                  <select 
+                    value={category} 
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-slate-400 px-4 py-2 outline-none appearance-none hover:text-white cursor-pointer uppercase tracking-widest"
+                  >
+                    <option value="Work">Work</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                  <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-4 font-bold text-xs uppercase transition-all flex items-center gap-2 whitespace-nowrap">
+                    Add Instance <IconPlus />
+                  </button>
                 </div>
-              ))}
-           </div>
+             </div>
+          </form>
         </div>
 
-        {/* ARCHIVE (COL 2) */}
-        <div>
-           <h3 className="text-rose-500 text-xs font-black tracking-[0.4em] mb-6 flex items-center gap-2 uppercase">
-             ⚔️ Victory_Vault
-           </h3>
-           <div className="space-y-3">
-              {tasks.filter(t => t.completed).map(task => (
-                <div key={task.id} className="bg-emerald-500/5 border border-emerald-500/10 p-5 rounded-2xl opacity-40 hover:opacity-100 transition-all">
-                   <div className="flex justify-between items-center">
-                      <p className="text-slate-400 line-through italic font-bold">Quest: {task.title}</p>
-                      <button onClick={() => completeTask(task)} className="text-emerald-500">✔</button>
-                   </div>
-                   <button onClick={() => setTasks(tasks.filter(t => t.id !== task.id))} className="mt-3 text-[9px] font-bold text-slate-700 hover:text-rose-500"><IconTrash /></button>
+        {/* CONTENT GRID */}
+        <div className="grid lg:grid-cols-1 gap-12">
+          
+          {/* PENDING SECTION */}
+          <section>
+            <div className="flex items-center gap-3 mb-4 px-2 text-slate-400">
+               <span className="text-[10px] font-bold tracking-[0.3em] uppercase">Inbox / {pending.length} Issues</span>
+            </div>
+            
+            <div className="bg-[#0c0c0c] border border-white/5 rounded-xl overflow-hidden divide-y divide-white/5 shadow-xl">
+              {pending.map(task => (
+                <div key={task.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-white/[0.02] transition-all">
+                  <button 
+                    onClick={() => toggleTask(task.id)}
+                    className="flex-shrink-0 w-5 h-5 rounded border border-white/20 flex items-center justify-center text-transparent group-hover:border-indigo-500 hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner"
+                  >
+                    <IconCheck />
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    {editingId === task.id ? (
+                      <input 
+                        className="bg-white/5 w-full rounded px-2 py-1 text-white outline-none border border-white/10"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => handleEdit(task.id)}
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-[#f0f0f0] truncate">{task.title}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border border-white/10 ${task.category === 'Urgent' ? 'text-rose-400 bg-rose-400/5 whitespace-nowrap' : 'text-slate-500 whitespace-nowrap'}`}>
+                          {task.category}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-6 text-slate-600">
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase whitespace-nowrap">
+                      <IconClock /> {task.timestamp}
+                    </span>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setEditingId(task.id); setEditValue(task.title); }} className="p-1 hover:text-white"><IconMore /></button>
+                      <button onClick={() => deleteTask(task.id)} className="text-[10px] font-bold hover:text-rose-500 uppercase transition-colors">Delete</button>
+                    </div>
+                  </div>
                 </div>
               ))}
-              {tasks.filter(t => t.completed).length === 0 && (
-                <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
-                   <p className="text-slate-700 text-[10px] font-bold uppercase tracking-widest">No victories recorded yet</p>
-                </div>
-              )}
-           </div>
-        </div>
+              {pending.length === 0 && <p className="p-12 text-center text-sm text-slate-600 font-medium italic">No active objectives in current queue.</p>}
+            </div>
+          </section>
 
-      </div>
+          {/* COMPLETED SECTION */}
+          <section className="mt-12">
+            <div className="flex items-center gap-3 mb-4 px-2 text-slate-600">
+               <span className="text-[10px] font-bold tracking-[0.3em] uppercase">Archive / {completed.length} Completed</span>
+            </div>
+            <div className="bg-transparent border border-white/5 rounded-xl divide-y divide-white/5">
+               {completed.map(task => (
+                 <div key={task.id} className="flex items-center justify-between px-6 py-4 opacity-40 hover:opacity-100 transition-opacity group">
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => toggleTask(task.id)} className="w-5 h-5 bg-indigo-600 rounded flex items-center justify-center text-white border border-indigo-500"><IconCheck /></button>
+                      <span className="text-sm font-medium text-slate-300 line-through decoration-slate-600">{task.title}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                       <span className="text-[10px] font-bold text-slate-800 uppercase tracking-tighter">Instance Closed</span>
+                       <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 text-slate-700 hover:text-rose-500 transition-all text-xs">×</button>
+                    </div>
+                 </div>
+               ))}
+            </div>
+          </section>
+
+        </div>
+      </main>
+      
+      {/* GLOBAL FOOTER */}
+      <footer className="fixed bottom-0 right-0 p-6 flex items-center gap-8 text-slate-700 pointer-events-none">
+        <div className="flex items-center gap-4">
+           <p className="text-[9px] font-bold uppercase tracking-[0.5em]">System_Log_Ver_2.5.0</p>
+           <div className="w-1.5 h-1.5 rounded-full bg-indigo-900 border border-indigo-500 animate-pulse"></div>
+        </div>
+      </footer>
     </div>
   );
 }
